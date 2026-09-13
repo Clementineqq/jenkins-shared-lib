@@ -6,8 +6,8 @@ class Config implements Serializable {
     String dockerCredentialsId
 
     Config(Map params) {
-        this.appName = params.appName ?: 'voidsounds'
-        this.registry = params.registry ?: 'registry.example.com'
+        this.appName = params.appName ?: 'Clementineqq/voidsounds'
+        this.registry = params.registry ?: 'ghcr.io'
         this.dockerCredentialsId = params.dockerCredentialsId ?: 'docker-registry'
     }
 }
