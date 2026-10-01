@@ -1,7 +1,5 @@
-
 def call(Map config = [:]) {
-
-    def status  = (config.status ?: 'unknown').toUpperCase() //шобы success и SUCCESS обрабатывались одинаково
+    def status  = (config.status ?: 'unknown').toUpperCase()
     def channel = config.channel ?: '#deployments'
     def message = config.message ?: ''
 
@@ -12,7 +10,7 @@ def call(Map config = [:]) {
 
     try {
         slackSend(channel: channel, color: color, message: text)
-    } catch (err) {
-        echo "Slack notify skipped (плагин Slack не настроен?): ${err.message}"
+    } catch (Throwable err) {
+        echo "Slack notify skipped: ${err.message}"
     }
 }
