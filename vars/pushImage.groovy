@@ -20,6 +20,7 @@ def call(Map config = [:]) {
             echo "\$DOCKER_PASS" | docker login ${registry} -u "\$DOCKER_USER" --password-stdin
             docker tag ${imageName}:${imageTag} ${fullName}
             docker push ${fullName}
+            docker logout $(registry)
         """
     }
 }
