@@ -8,9 +8,15 @@ def call(Map config = [:]) {
 
     echo text
 
-    try {
-        slackSend(channel: channel, color: color, message: text)
-    } catch (Throwable err) {
-        echo "Slack notify skipped: ${err.message}"
+    def tokenId = config.tokenCredentialId ?: env.SLACK_TOKEN_CREDENTIAL_ID
+    if (tokenId) {
+        try {
+            slackSend(channel: channel, color: color, tokenCredentialId: tokenId, message: text)
+        } catch (Throwable err) {
+            echo "Slack notify skipped: ${err.message}"
+        }
+    } else {
+        echo "Slack не настроен (нет tokenCredentialId) — пропускаю уведомление"
     }
+
 }
