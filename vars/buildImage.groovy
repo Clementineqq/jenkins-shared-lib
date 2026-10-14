@@ -9,7 +9,7 @@ def call(Map config = [:]) {
     echo "Building ${imageName}:${imageTag}"
 
     sh """
-        docker build -f ${dockerfile} -t ${imageName}:${imageTag} -t ${imageName}:latest ${context}
+        docker build -f ${dockerfile} -t ${imageName}:${imageTag} ${context}
     """
 
     env.BUILT_IMAGE = "${imageName}:${imageTag}" //запоминаю собранный образ, шобы следующий шаг pushImage его подхватил
