@@ -2,7 +2,7 @@
 def call(Map config = [:]) {
     
     def imageName  = (config.imageName ?: 'app').toLowerCase() //на всякий случай строчными буквами тк докер требует 
-    def imageTag   = config.imageTag  ?: 'latest'
+    def imageTag = config.imageTag ?: error("imageTag is required")
     def dockerfile = config.dockerfile ?: 'Dockerfile'
     def context    = config.context    ?: '.'
 
