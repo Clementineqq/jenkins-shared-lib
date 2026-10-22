@@ -17,35 +17,41 @@ vars/                        глобальные шаги, доступные �
   buildImage.groovy          сборка Docker-образа
   pushImage.groovy           публикация образа в registry
   runTests.groovy            go mod download / vet / test в контейнере
-  notify.groovy              уведомление в Slack 
-src/org/voidsounds/
-  Config.groovy              дефолты проекта (appName, registry, credentials)
+  notify.groovy              уведомление в Slack
 ```
+
 
 ## Шаги
 
 ### `runTests(action: 'all', goImage: 'golang:1.25-alpine')`
 
 Прогоняет шаги внутри контейнера с Go (`withDockerContainer`).
-`action`: `install` | `lint` | `unit` | `all`.
+`action`: `install` | `lint` | `unit` | `all`. Комбинации складываются:
+`all` — это `go mod download`, `go vet ./...` и `go test ./...`.
 `HOME`, `GOCACHE`, `GOMODCACHE` перенаправлены в `/tmp`, иначе на агенте
 ловим `permission denied` на кеше.
 
-### `buildImage(imageName:, imageTag:, dockerfile: 'Dockerfile', context: '.')`
+### `buildImage(imageName: 'app', imageTag:, dockerfile: 'Dockerfile', context: '.')`
 
 Собирает образ и запоминает его в `env.BUILT_IMAGE`, чтобы следующий шаг
-не принимал тег повторно. `imageTag` обязателен — шаг упадёт с понятной ошибкой.
+не принимал тег повторно. `imageTag` обязателен — без него шаг падает
+с `imageTag is required`, дефолта нет специально: тег должен приходить
+извне (в CI это первые 7 символов SHA). `imageName` по умолчанию `app`.
 
-### `pushImage(registry: 'ghcr.io', imageName:, imageTag:, credentialsId:)`
+### `pushImage(registry: 'ghcr.io', imageName:, imageTag:, credentialsId: 'github-registry')`
 
 Логин в registry через `--password-stdin` (пароль не попадает в лог),
-`docker tag`, `docker push`, `docker logout`. По умолчанию берёт имя и тег
-из `env.BUILT_IMAGE`.
+`docker tag`, `docker push`, `docker logout`. Если `imageName` и `imageTag`
+не переданы, берёт их из `env.BUILT_IMAGE`, то есть после `buildImage` их
+можно не повторять. Если и `BUILT_IMAGE` нет — подставит `app:latest`;
+это аварийный fallback, в пайплайне тег лучше передавать явно.
 
-### `notify(status:, message:, channel: '#deployments', tokenCredentialId:)`
+### `notify(status: 'unknown', message: '', channel: '#deployments', tokenCredentialId:)`
 
-Отправляет сообщение в Slack. Если креденшен не настроен — пишет в лог и
-**не валит пайплайн**: уведомления не должны ломать сборку.
+Отправляет сообщение в Slack. Токен берётся из `tokenCredentialId`, а если
+он не передан — из переменной окружения `SLACK_TOKEN_CREDENTIAL_ID`.
+Когда нет ни того, ни другого, шаг пишет в лог и **не валит пайплайн**:
+уведомления не должны ломать сборку. Ошибки `slackSend` тоже перехватываются.
 
 ## Пример пайплайна
 
@@ -76,23 +82,27 @@ pipeline {
 
 ## Версионирование
 
-Шаги ломаются совместимостью так же, как обычный код, поэтому пайплайны
-подключаются к **тегом**, а не к ветке:
+Шаги ломают совместимость так же, как обычный код, поэтому пайплайны
+подключаются к **тегу**, а не к ветке:
 
 ```bash
-git tag v1.1.0
-git push origin v1.1.0
+git tag v1.0.0
+git push origin v1.0.0
 ```
 
-- `@v1.0.0` — стабильная версия, на неё смотрят боевые пайплайны
-- `@dev` — разработка; используется только в тестовых джобах
 
 ## Требования к Jenkins
 
-- плагин **Docker Pipeline** (`withDockerContainer`)
-- плагин **Slack Notification**
-- агент с меткой `docker` и доступом к Docker
-- креденшен `github-registry` (username + PAT с правом `write:packages`)
+- библиотека зарегистрирована: **Manage Jenkins → System → Global Pipeline
+  Libraries** → Name `jenkins-shared-lib`, retrieval method — Git, URL
+  репозитория, default version `main`, включённая опция «Allow default
+  version to be overridden» (без неё `@v1.0.0` в аннотации не сработает);
+- плагин **Docker Pipeline** — для `withDockerContainer`;
+- плагин **Slack Notification** — для `notify`;
+- агент с меткой `docker` и доступом к Docker;
+- креденшел `github-registry` (username + PAT с правом `write:packages`);
+- креденшел для Slack — опционально, через `tokenCredentialId` или
+  `SLACK_TOKEN_CREDENTIAL_ID`.
 
 ## Ограничения
 
